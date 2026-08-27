@@ -323,127 +323,108 @@ with tab_how:
 
     with st.expander("1. Entender el problema (Enfoque de negocio)", expanded=True):
         st.write('''
-        **El objetivo:** Definimos el problema como una tarea de **clasificación binaria supervisada**. Dado un vector de características *x ∈ ℝⁿ* que representa el perfil de un cliente, el modelo debe estimar *P(Churn=1 | x)*, la probabilidad condicional de abandono.
-
-        **Métrica de negocio:** El costo asimétrico del Churn justifica un enfoque basado en probabilidades en lugar de una clasificación dura. Un falso negativo (cliente churn que no fue detectado) tiene un costo 5-25x mayor que un falso positivo. Por eso el modelo devuelve una **probabilidad continua** que permite segmentar intervenciones por nivel de riesgo.
-
-        **Dataset:** Utilizamos el dataset *Telco Customer Churn* de IBM, con 7,043 registros y 21 variables, incluyendo la variable target binaria `Churn` (Yes/No).
+        **El objetivo:** Antes de tocar una sola línea de código, definimos qué queríamos resolver.
+        En este caso, el reto era detectar qué clientes están a punto de cancelar su servicio (fenómeno conocido como *Churn*). La meta de negocio es identificar este riesgo a tiempo para que el equipo de marketing pueda actuar, ofreciendo alternativas o promociones antes de que el cliente tome la decisión final de irse.
+        ''')
+        st.info('''
+        **Detalle técnico:** El problema se formula como una **clasificación binaria supervisada**. Dado un vector de características *x ∈ ℝⁿ* que representa el perfil de un cliente, el modelo debe estimar *P(Churn=1 | x)*, la probabilidad condicional de abandono.
+        El costo asimétrico del Churn justifica un enfoque basado en probabilidades: un falso negativo (cliente churn que no fue detectado) tiene un costo 5-25x mayor que un falso positivo. Por eso el modelo devuelve una **probabilidad continua** que permite segmentar intervenciones por nivel de riesgo.
+        Dataset: *Telco Customer Churn* de IBM, con 7,043 registros y 21 variables, incluyendo la variable target binaria `Churn` (Yes/No).
         ''')
 
     with st.expander("2. Identificar variables predictoras (Feature Engineering)"):
         st.write('''
-        **Matriz de diseño:** Construimos *X ∈ ℝ^{7043 × 19}* excluyendo la variable target y `customerID`.
+        **La estrategia:** La Inteligencia Artificial necesita "pistas" para adivinar el futuro.
+        Seleccionamos factores clave del comportamiento del cliente: ¿Qué tipo de contrato tienen (mensual o anual)? ¿Cuánto pagan al mes? ¿Cuánto tiempo llevan con la empresa? ¿Tienen soporte técnico contratado? Estas características son las piezas del rompecabezas que alimentan al modelo.
+        ''')
+        st.info('''
+        **Detalle técnico:** Construimos una matriz de diseño *X ∈ ℝ^{7043 × 19}* excluyendo la variable target y `customerID`.
 
-        **Variables numéricas (3):**
-        - `tenure`: antigüedad en meses (discreta, rango 0-72)
-        - `MonthlyCharges`: cargo mensual (continua, rango ~18-120)
-        - `TotalCharges`: cargo acumulado (continua, convertida de string a float con coerción de errores)
+        **Variables numéricas (3):** `tenure` (antigüedad, rango 0-72), `MonthlyCharges` (cargo mensual, rango ~18-120), `TotalCharges` (cargo acumulado, convertida de string a float con coerción de errores).
 
-        **Variables categóricas (16):** Cada una es codificada posteriormente con **One-Hot Encoding**. Ejemplos:
-        - `Contract`: 3 niveles → One-Hot genera 3 columnas binarias
-        - `PaymentMethod`: 4 niveles → 4 columnas binarias
-        - `InternetService`: 3 niveles → 3 columnas binarias
+        **Variables categóricas (16):** Cada una se codifica con **One-Hot Encoding**. Ejemplos: `Contract` tiene 3 niveles → genera 3 columnas binarias; `PaymentMethod` tiene 4 niveles → genera 4 columnas binarias.
 
         **Transformación final:** Después del preprocesamiento, el número de columnas se expande de 19 a ~30 features numéricas, todas en escala compatible para el algoritmo.
         ''')
 
     with st.expander("3. Estructurar la base de datos (Ingeniería de datos)"):
         st.write('''
-        **Ingesta:** El CSV se carga con `pandas.read_csv()` y se almacena en un DataFrame tipado. Cada columna se infiere automáticamente: `object` para strings, `int64` para enteros, `float64` para decimales.
+        **La organización:** Recopilamos toda la información histórica dispersa de los clientes y la organizamos en una estructura tabular centralizada.
+        Imagínalo como un archivo maestro consolidado donde cada fila es un cliente único y cada columna es una de las "pistas" que identificamos en el paso anterior.
+        ''')
+        st.info('''
+        **Detalle técnico:** El CSV se carga con `pandas.read_csv()` y se almacena en un DataFrame tipado. Cada columna se infiere automáticamente: `object` para strings, `int64` para enteros, `float64` para decimales.
 
-        **Estructura tabular:** El dataset es una matriz donde:
-        - Cada **fila** (i) es un cliente único con identificador temporal-espacial
-        - Cada **columna** (j) es una característica observable del comportamiento del cliente
-        - La **variable target** `y ∈ {0, 1}` indica si el cliente abandonó (1) o permanece (0)
+        El dataset es una matriz donde cada **fila** (i) es un cliente único, cada **columna** (j) es una característica observable, y la **variable target** `y ∈ {0, 1}` indica si el cliente abandonó (1) o permanece (0).
 
         **Desbalance de clases:** El dataset tiene aproximadamente 73% No Churn vs 27% Churn. Este desbalance se maneja con **stratified split** durante la partición train/test para preservar la proporción en ambos conjuntos.
         ''')
 
     with st.expander("4. Garantizar calidad del dato (Data Cleaning Pipeline)"):
         st.write('''
-        El pipeline de limpieza (`quality.py`) ejecuta 3 operaciones en cascada:
+        **La purificación:** Los datos del mundo real siempre vienen con errores, vacíos o formatos incorrectos.
+        En esta fase crítica, rellenamos huecos de información (como cargos mensuales no registrados), eliminamos datos inútiles (como el ID del cliente, que no ayuda a predecir nada) y transformamos textos a un lenguaje numérico que la computadora pueda procesar correctamente.
+        ''')
+        st.info('''
+        **Detalle técnico:** El pipeline de limpieza (`quality.py`) ejecuta 3 operaciones en cascada:
 
-        **4.1 Coerción de tipos:**
-        ```
-        TotalCharges = pd.to_numeric(TotalCharges, errors='coerce')
-        ```
-        Valores no numéricos (espacios en blanco, texto) se convierten a `NaN`. Esto es necesario porque el CSV original tiene 11 registros con espacios vacíos en esta columna.
+        **Coerción de tipos:** `TotalCharges = pd.to_numeric(TotalCharges, errors='coerce')` — valores no numéricos se convierten a `NaN`. El CSV original tiene 11 registros con espacios vacíos en esta columna.
 
-        **4.2 Imputación por mediana:**
-        ```
-        TotalCharges.fillna(TotalCharges.median())
-        ```
-        Se usa la **mediana** (robusta a outliers) en lugar de la media, ya que la distribución de cargos totales tiene sesgo positivo. La mediana minimiza el error de imputación en presencia de valores extremos.
+        **Imputación por mediana:** `TotalCharges.fillna(TotalCharges.median())` — se usa la mediana (robusta a outliers) en lugar de la media, ya que la distribución de cargos totales tiene sesgo positivo.
 
-        **4.3 Eliminación de features no informativas:**
-        Se descarta `customerID` porque es un identificador nominal sin poder predictivo. Incluirlo causaría **data leakage** o overfitting espurio.
+        **Eliminación de features no informativas:** Se descarta `customerID` porque es un identificador nominal sin poder predictivo. Incluirlo causaría **data leakage** o overfitting espurio.
 
         **Resultado:** DataFrame limpio con 0 valores nulos y todas las columnas en tipos correctos.
         ''')
 
     with st.expander("5. Estadística descriptiva (EDA cuantitativo)"):
         st.write('''
-        El Análisis Exploratorio de Datos (EDA) cuantitativo verifica hipótesis antes del modelado:
+        **El análisis histórico:** Antes de predecir el futuro, miramos el pasado.
+        En esta etapa cruzamos las variables para visualizar el panorama general y confirmar hipótesis. Por ejemplo, al graficar los datos, confirmamos visualmente que los clientes que pagan mes a mes tienen una tasa de abandono drásticamente mayor que aquellos con contratos anuales.
+        ''')
+        st.info('''
+        **Detalle técnico:**
 
-        **5.1 Distribución de la variable target:**
-        Se calcula la tasa de Churn global: *P(Churn=1) ≈ 0.265*. Esto establece el **baseline** del modelo: un clasificador trivial que siempre prediga "No Churn" tendría ~73.5% de accuracy.
+        **Distribución de la variable target:** Se calcula la tasa de Churn global: *P(Churn=1) ≈ 0.265*. Esto establece el **baseline**: un clasificador trivial que siempre prediga "No Churn" tendría ~73.5% de accuracy.
 
-        **5.2 Correlaciones lineales:**
-        Se calcula la matriz de correlación de Pearson:
-        ```
-        ρ(Xᵢ, Xⱼ) = Cov(Xᵢ, Xⱼ) / (σᵢ · σⱼ)
-        ```
+        **Correlaciones lineales (Pearson):**
+        `ρ(Xᵢ, Xⱼ) = Cov(Xᵢ, Xⱼ) / (σᵢ · σⱼ)`
         Hallazgos clave:
-        - `tenure` y `TotalCharges`: correlación positiva fuerte (ρ ≈ 0.83), esperada porque los cargos acumulados crecen con el tiempo
-        - `tenure` y `Churn`: correlación negativa (ρ ≈ -0.35), clientes con mayor antigüedad abandonan menos
-        - `MonthlyCharges` y `Churn`: correlación positiva débil (ρ ≈ 0.19), clientes con cargos altos tienden a abandonar más
+        - `tenure` ↔ `TotalCharges`: ρ ≈ 0.83 (positiva fuerte, los cargos crecen con el tiempo)
+        - `tenure` ↔ `Churn`: ρ ≈ -0.35 (negativa, mayor antigüedad = menos abandono)
+        - `MonthlyCharges` ↔ `Churn`: ρ ≈ 0.19 (positiva débil, cargos altos = más abandono)
 
-        **5.3 Distribuciones por clase:**
-        Los histogramas segmentados por Churn confirman que:
-        - Clientes con tenure < 12 meses tienen tasa de Churn > 40%
-        - Clientes con contrato "Month-to-month" tienen tasa de Churn > 42%
-        - Clientes con "Fiber optic" tienen tasa de Churn > 30%
+        **Distribuciones por clase:** Clientes con tenure < 12 meses tienen tasa de Churn > 40%; contrato "Month-to-month" > 42%; "Fiber optic" > 30%.
         ''')
 
     with st.expander("6. Predicción con IA (El motor predictivo)"):
         st.write('''
-        **6.1 Arquitectura del Pipeline:**
-        Se construye un `sklearn.pipeline.Pipeline` con dos etapas:
+        **El aprendizaje:** Aquí entra en acción el Machine Learning. Usamos un algoritmo avanzado que analizó miles de perfiles de clientes del pasado, aprendiendo de forma autónoma las reglas y patrones ocultos de los que decidieron irse.
+        Hoy, cuando evalúas a un cliente nuevo en esta aplicación, la IA compara su perfil con todo lo que aprendió y emite un veredicto matemático: la probabilidad exacta de abandono.
+        ''')
+        st.info('''
+        **Detalle técnico:**
 
-        **Etapa 1 — Preprocesamiento (`ColumnTransformer`):**
-        - `StandardScaler` para variables numéricas: *x' = (x - μ) / σ* — centra cada feature en media 0 y desviación estándar 1, requisito para que XGBoost converja eficientemente
-        - `OneHotEncoder(handle_unknown='ignore')` para categóricas: convierte cada nivel en un vector binario. `handle_unknown='ignore'` asegura que categorías no vistas en entrenamiento no causen errores en inferencia
+        **Arquitectura del Pipeline** (`sklearn.pipeline.Pipeline` con 2 etapas):
 
-        **Etapa 2 — Modelo (`XGBClassifier`):**
-        XGBoost es un algoritmo de **Gradient Boosting** que construye secuencialmente árboles de decisión débiles, donde cada nuevo árbol corrige los errores residuales del anterior.
+        *Etapa 1 — Preprocesamiento (`ColumnTransformer`):*
+        - `StandardScaler` para numéricas: *x' = (x - μ) / σ* — centra cada feature en media 0 y desviación estándar 1
+        - `OneHotEncoder(handle_unknown='ignore')` para categóricas: convierte cada nivel en un vector binario
 
-        **Hiperparámetros utilizados:**
-        - `n_estimators=200`: 200 árboles en el ensemble
-        - `max_depth=5`: profundidad máxima por árbol (controla complejidad)
-        - `learning_rate=0.1`: tasa de aprendizaje (reduce la contribución de cada árbol)
-        - `eval_metric='logloss'`: función de pérdida logarítmica para clasificación binaria
+        *Etapa 2 — Modelo (`XGBClassifier`):*
+        XGBoost es un **Gradient Boosting** que construye secuencialmente árboles débiles, donde cada nuevo árbol corrige los errores residuales del anterior.
+
+        **Hiperparámetros:** `n_estimators=200` (200 árboles), `max_depth=5` (profundidad máxima), `learning_rate=0.1` (tasa de aprendizaje), `eval_metric='logloss'`.
 
         **Función de pérdida (Log Loss):**
-        ```
-        L(y, ŷ) = -[y·log(ŷ) + (1-y)·log(1-ŷ)]
-        ```
+        `L(y, ŷ) = -[y·log(ŷ) + (1-y)·log(1-ŷ)]`
         Donde *ŷ = P(Churn=1 | x)* es la probabilidad predicha.
 
-        **6.2 Partición de datos:**
-        ```
-        train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
-        ```
-        - 80% entrenamiento (5,634 muestras), 20% prueba (1,409 muestras)
-        - **Stratified split** preserva la proporción de clases en ambos conjuntos
-        - `random_state=42` garantiza reproducibilidad
+        **Partición:** `train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)` — 80% entrenamiento (5,634 muestras), 20% prueba (1,409 muestras), stratified para preservar proporción de clases.
 
-        **6.3 Serialización:**
-        El pipeline completo (preprocesador + modelo) se exporta con `joblib.dump()` a `models/churn_model.joblib`. Este archivo contiene todo lo necesario para inferencia: los parámetros del scaler, el mapeo del OneHotEncoder y los 200 árboles del XGBoost.
+        **Serialización:** El pipeline completo se exporta con `joblib.dump()` a `models/churn_model.joblib`, conteniendo scaler, OneHotEncoder y los 200 árboles del XGBoost.
 
-        **6.4 Explicabilidad (SHAP):**
-        Se utiliza `shap.TreeExplainer` basado en la teoría de **valores de Shapley** de la teoría de juegos cooperativos. Para cada feature *i*, el valor SHAP calcula:
-        ```
-        φᵢ = Σ [|S|!(n-|S|-1)!/n!] · [f(S ∪ {i}) - f(S)]
-        ```
-        Donde *S* es cualquier subconjunto de features sin *i*, y *f(S)* es la predicción del modelo usando solo las features en *S*. El gráfico de cascada (waterfall) muestra cómo cada feature contribuye a desplazar la predicción desde el valor base (promedio del dataset) hasta la predicción final para un cliente específico.
+        **Explicabilidad (SHAP):** Se utiliza `shap.TreeExplainer` basado en **valores de Shapley** de la teoría de juegos cooperativos:
+        `φᵢ = Σ [|S|!(n-|S|-1)!/n!] · [f(S ∪ {i}) - f(S)]`
+        Donde *S* es cualquier subconjunto de features sin *i*, y *f(S)* es la predicción del modelo. El gráfico de cascada (waterfall) muestra cómo cada feature contribuye a desplazar la predicción desde el valor base hasta la predicción final para un cliente específico.
         ''')
