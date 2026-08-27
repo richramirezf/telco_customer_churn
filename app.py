@@ -44,10 +44,26 @@ def apply_clean_ui():
         }
 
         div[data-testid="stForm"], div[data-testid="stExpander"] {
-            background-color: #ffffff;
+            background-color: #ffffff !important;
             border-radius: 12px;
             border: 1px solid #e5e7eb;
             box-shadow: 0px 1px 3px rgba(0,0,0,0.05);
+        }
+
+        div[data-testid="stForm"] p, div[data-testid="stForm"] label,
+        div[data-testid="stExpander"] p, div[data-testid="stExpander"] label,
+        div[data-testid="stExpander"] li {
+            color: #374151 !important;
+        }
+
+        div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary p, div[data-testid="stExpander"] summary span {
+            color: #042f2e !important;
+            font-weight: 600;
+        }
+
+        div[data-testid="stExpander"] svg {
+            fill: #042f2e !important;
+            color: #042f2e !important;
         }
     </style>
     """, unsafe_allow_html=True)
